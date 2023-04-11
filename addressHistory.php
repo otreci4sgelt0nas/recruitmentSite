@@ -16,10 +16,10 @@ if (isset($_POST['submit'])) {
     $sql_values = '';
     foreach ($addresses as $key => $address) {
         $from_date = $from_dates[$key];
-        $sql_values .= "('$address', '$from_date'), ";
+        $sql_values .= "('email@mail.com', '$address', '$from_date'), ";
     }
     $sql_values = rtrim($sql_values, ', ');
-    $sql = "INSERT INTO address_history (address, from_date) VALUES $sql_values";
+    $sql = "INSERT INTO address_history (email, address, from_date) VALUES $sql_values";
     if ($conn->query($sql) === TRUE) {
         echo "Address history added successfully";
     } else {
@@ -48,6 +48,7 @@ if ($result->num_rows > 0) {
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAIx3cN-voKQtY3MqfIvYErJwtwf0wUVfE&libraries=places"></script>
 </head>
 <body>
     <div class="container">
@@ -60,7 +61,7 @@ if ($result->num_rows > 0) {
             ?>
             <div class="form-group">
                 <label>Address:</label>
-                <input type="text" class="form-control" name="address[]" value="<?php echo $address['address']; ?>" required>
+                <input type="text" class="form-control address" name="address[]" value="<?php echo $address['address']; ?>" required>
                 <label>From Date:</label>
                 <input type="date" class="form-control" name="from_date[]" value="<?php echo $address['from_date']; ?>" required>
             </div>
@@ -70,7 +71,7 @@ if ($result->num_rows > 0) {
             ?>
             <div class="form-group" id="new-address-fields">
                 <label>Address:</label>
-                <input type="text" class="form-control" name="address[]" required>
+                <input type="text" class="form-control address" name="address[]" required>
                 <label>From Date:</label>
                 <input type="date" class="form-control" name="from_date[]" required>
             </div>
@@ -90,10 +91,18 @@ if ($result->num_rows > 0) {
                 if (diff_years < 7) {
                     var new_field = $('#new-address-fields').clone();
                     new_field.find('input').val('');
+                    new_field.find('.address').each(function() {
+                        var autocomplete = new google.maps.places.Autocomplete(this);
+                    });
                     $('#submit-btn-group').before(new_field);
                 } else {
                     $('#submit-btn').prop('disabled', false);
                 }
+            });
+
+            // Initialize autocomplete for existing address fields
+            $('.address').each(function() {
+                var autocomplete = new google.maps.places.Autocomplete(this);
             });
         });
     </script>
