@@ -9,15 +9,31 @@ if ($conn->connect_error) {
 // Check if form has been submitted
 if (isset($_POST['submit'])) {
     // Get form data
-    $address = $_POST['address'];
-    $from_date = $_POST['from_date'];
+    $addresses = $_POST['address'];
+    $from_dates = $_POST['from_date'];
 
     // Insert data into database
-    $sql = "INSERT INTO address_history (address, from_date) VALUES ('$address', '$from_date')";
+    $sql_values = '';
+    foreach ($addresses as $key => $address) {
+        $from_date = $from_dates[$key];
+        $sql_values .= "('$address', '$from_date'), ";
+    }
+    $sql_values = rtrim($sql_values, ', ');
+    $sql = "INSERT INTO address_history (address, from_date) VALUES $sql_values";
     if ($conn->query($sql) === TRUE) {
         echo "Address history added successfully";
     } else {
         echo "Error: " . $sql . "<br>" . $conn->error;
+    }
+}
+
+// Get all previously saved addresses from database
+$sql = "SELECT * FROM address_history";
+$result = $conn->query($sql);
+$addresses = array();
+if ($result->num_rows > 0) {
+    while ($row = $result->fetch_assoc()) {
+        $addresses[] = $row;
     }
 }
 ?>
@@ -37,39 +53,46 @@ if (isset($_POST['submit'])) {
     <div class="container">
         <h2>Address History Form</h2>
         <form id="address-history-form" method="POST">
-            <div class="form-group" id="address-fields">
+            <?php
+            $i = 0;
+            while ($i < count($addresses)) {
+                $address = $addresses[$i];
+            ?>
+            <div class="form-group">
+                <label>Address:</label>
+                <input type="text" class="form-control" name="address[]" value="<?php echo $address['address']; ?>" required>
+                <label>From Date:</label>
+                <input type="date" class="form-control" name="from_date[]" value="<?php echo $address['from_date']; ?>" required>
+            </div>
+            <?php
+                $i++;
+            }
+            ?>
+            <div class="form-group" id="new-address-fields">
                 <label>Address:</label>
                 <input type="text" class="form-control" name="address[]" required>
                 <label>From Date:</label>
                 <input type="date" class="form-control" name="from_date[]" required>
             </div>
-            <button type="submit" class="btn btn-primary" name="submit" id="submit-btn" disabled>Submit</button>
+            <div class="form-group" id="submit-btn-group">
+                <button type="submit" class="btn btn-primary" name="submit" id="submit-btn" disabled>Submit</button>
+            </div>
         </form>
     </div>
 
     <script>
         $(document).ready(function() {
             // Add new address field if less than 7 years
-            $('#address-history-form').on('change', 'input[type="date"]', function() {
-                var fromDate = new Date($(this).val());
-                var currentDate = new Date();
-                var diffYears = Math.abs(currentDate.getFullYear() - fromDate.getFullYear());
-                var newField = '';
-                if (diffYears < 7) {
-                    newField += '<div class="form-group">';
-                    newField += '<label>Address:</label>';
-                    newField += '<input type="text" class="form-control" name="address[]" required>';
-                    newField += '<label>From Date:</label>';
-                    newField += '<input type="date" class="form-control" name="from_date[]" required>';
-                    newField += '</div>';
-                    $('#address-fields').append(newField);
-                }
-
-                // Enable submit button if more than 7 years
-                if (diffYears >= 7) {
-                    $('#submit-btn').prop('disabled', false);
+            $('#address-history-form').on('change', 'input[name="from_date[]"]', function() {
+                var current_date = new Date();
+                var from_date = new Date($(this).val());
+                var diff_years = (current_date - from_date) / (1000 * 3600 * 24 * 365);
+                if (diff_years < 7) {
+                    var new_field = $('#new-address-fields').clone();
+                    new_field.find('input').val('');
+                    $('#submit-btn-group').before(new_field);
                 } else {
-                    $('#submit-btn').prop('disabled', true);
+                    $('#submit-btn').prop('disabled', false);
                 }
             });
         });
